@@ -64,7 +64,7 @@ async def sort_itineraries_handler(data: SortItinerariesSchemaRequest) -> SortIt
     algorithm: SortingAlgorithmName = data.sorting_type
     return SortItinerariesSchemaResponse(
         sorting_type=algorithm,
-        itineraries=await sort_itineraries(algorithm, data.itineraries)
+        sorted_itineraries=await sort_itineraries(algorithm, data.itineraries)
     )
 
 

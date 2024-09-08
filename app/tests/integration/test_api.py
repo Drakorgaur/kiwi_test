@@ -13,10 +13,6 @@ from testcontainers.core.container import DockerContainer
 
 from testcontainers.core.network import Network
 
-# TODO: remove
-os.environ["TESTCONTAINERS_API_IMAGE"] = "14ec96f8650b"
-os.environ["TESTCONTAINERS_PROJECT_DIR"] = "/Users/pomo/kiwi/kiwi"
-
 
 @environ.config(prefix="TESTCONTAINERS")
 class TestContConfig:
@@ -94,7 +90,7 @@ class TestContainers(unittest.TestCase):
     @classmethod
     def ping_app_until_ready(cls):
         for _ in range(10):
-            with httpx.Client() as client, contextlib.suppress(httpx.ConnectError):
+            with httpx.Client() as client, contextlib.suppress(httpx.ConnectError, httpx.RemoteProtocolError):
                 response = client.get(f"{cls.base_url()}/sorts")
                 if response.status_code == 200:
                     break
