@@ -90,7 +90,7 @@ class TestContainers(unittest.TestCase):
     @classmethod
     def ping_app_until_ready(cls):
         for _ in range(10):
-            with httpx.Client() as client, contextlib.suppress(httpx.ConnectError):
+            with httpx.Client() as client, contextlib.suppress(httpx.ConnectError, httpx.RemoteProtocolError):
                 response = client.get(f"{cls.base_url()}/sorts")
                 if response.status_code == 200:
                     break
