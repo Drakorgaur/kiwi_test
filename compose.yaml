@@ -1,0 +1,29 @@
+version: "3.9" # the most stable and well-known for me :D
+
+volumes:
+  cache:
+  socket:
+
+services:
+  api:
+    user: "0:0"  # root
+    build:
+      context: app
+      dockerfile: Dockerfile
+      args:
+        - SOCKET_DIR=/www/run
+    ports:
+      - "8000:8000"  # for local development purposes
+    environment:
+      - CURRENCY_LOCAL_DIR=/tmp/cache
+    volumes:
+      - cache:/tmp/cache:rw
+      - socket:/www/run:rw
+  proxy:
+    image: nginx:alpine
+    volumes:
+      - socket:/www/run:ro
+      # configuration mounting
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"  # discussable

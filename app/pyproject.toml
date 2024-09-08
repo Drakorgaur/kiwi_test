@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "kiwi"
+version = "0.1.0"
+description = ""
+authors = ["pomo <mark.barzali@firma.seznam.cz>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+structlog = "24.4.0"
+uvicorn = "^0.30.6"
+pydantic = "^2.9.0"
+fastapi = "^0.114.0"
+httpx = "^0.27.2"
+environ-config = "^24.1.0"
+aiofiles = "^24.1.0"
+
+
+[tool.poetry.group.tests.dependencies]
+testcontainers = "^4.8.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

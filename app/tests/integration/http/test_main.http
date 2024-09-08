@@ -1,0 +1,80 @@
+# Test your FastAPI endpoints
+
+GET http://127.0.0.1:8000/healthz
+Accept: application/json
+
+
+### Get sort algorithms
+
+GET http://127.0.0.1:80/sorts
+Accept: application/json
+
+
+### Sort itineraries
+
+POST http://127.0.0.1:80/sort_itineraries
+Content-Type: application/json
+
+{
+ "sorting_type": "cheapest",
+ "itineraries": [
+   {
+     "id": "sunny_beach_bliss",
+     "duration_minutes": 330,
+     "price": {
+       "amount": "90",
+       "currency": "EUR"
+     }
+   },
+   {
+     "id": "rocky_mountain_adventure",
+     "duration_minutes": 140,
+     "price": {
+       "amount": "830",
+       "currency": "EUR"
+     }
+   },
+   {
+     "id": "urban_heritage_odyssey",
+     "duration_minutes": 275,
+     "price": {
+       "amount": "620",
+       "currency": "EUR"
+     }
+   },
+   {
+     "id": "urban_heritage_odyssey",
+     "duration_minutes": 275,
+     "price": {
+       "amount": "620",
+       "currency": "USD"
+     }
+   },
+   {
+     "id": "urban_heritage_odyssey",
+     "duration_minutes": 275,
+     "price": {
+       "amount": "620",
+       "currency": "EUR"
+     }
+   },
+   {
+     "id": "urban_heritage_odyssey",
+     "duration_minutes": 275,
+     "price": {
+       "amount": "620",
+       "currency": "USD"
+     }
+   },
+   {
+     "id": "urban_heritage_odyssey",
+     "duration_minutes": 275,
+     "price": {
+       "amount": "620",
+       "currency": "USD"
+     }
+   }
+ ]
+}
+
+###
