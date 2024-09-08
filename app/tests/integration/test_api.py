@@ -13,10 +13,6 @@ from testcontainers.core.container import DockerContainer
 
 from testcontainers.core.network import Network
 
-# TODO: remove
-os.environ["TESTCONTAINERS_API_IMAGE"] = "14ec96f8650b"
-os.environ["TESTCONTAINERS_PROJECT_DIR"] = "/Users/pomo/kiwi/kiwi"
-
 
 @environ.config(prefix="TESTCONTAINERS")
 class TestContConfig:
