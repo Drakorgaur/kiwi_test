@@ -1,18 +1,18 @@
 # Test your FastAPI endpoints
 
-GET http://127.0.0.1:8000/healthz
+GET http://{{host}}:{{port}}/healthz
 Accept: application/json
 
 
 ### Get sort algorithms
 
-GET http://127.0.0.1:80/sorts
+GET http://{{host}}:{{port}}/sorts
 Accept: application/json
 
 
 ### Sort itineraries
 
-POST http://127.0.0.1:80/sort_itineraries
+POST http://{{host}}:{{port}}/sort_itineraries
 Content-Type: application/json
 
 {
