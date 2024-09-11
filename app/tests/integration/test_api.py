@@ -16,7 +16,7 @@ from testcontainers.core.network import Network
 
 @environ.config(prefix="TESTCONTAINERS")
 class TestContConfig:
-    project_dir: Path = environ.var(converter=Path)
+    project_dir: Path = environ.var(converter=Path, default=Path(__file__).parent.parent.parent.parent)
     api_image: str = environ.var()
     proxy_image: str = environ.var(default="nginx:alpine")
 
