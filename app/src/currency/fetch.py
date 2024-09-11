@@ -1,15 +1,8 @@
-import contextlib
 import datetime
-import json
 import time
 
-from functools import lru_cache
-from abc import ABC as Abstract
-from json import JSONDecodeError
-from pathlib import Path
 from typing import Type, ClassVar, TypedDict
 
-import aiofiles
 import environ
 
 from src.contracts.currency import Rates
@@ -21,75 +14,59 @@ __all__ = ["fetch_currency"]
 from src.currency.config import CurrencyConfig
 
 
-class _LocalStorage(Abstract):
+class _LocalStorage:
     config: ClassVar[CurrencyConfig] = environ.to_config(CurrencyConfig)
 
     class InternalSchema(TypedDict):
         rates: Rates
         expires: float
 
-    @classmethod
-    def base_file(cls, base: str) -> Path:
-        return cls.config.local_dir / f"{base}.json"
+    def __init__(self):
+        self._cache: dict[str, _LocalStorage.InternalSchema] = {}
 
-    # TODO: cache somehow, file reading is slow
-    @classmethod
-    async def get(cls, base: str) -> Rates:
-        # TODO: should be lock on fs level
-        # still may throw PermissionDenied, etc.
-        with contextlib.suppress(FileNotFoundError, JSONDecodeError):
-            async with aiofiles.open(cls.base_file(base), "rb") as f:
-                data: cls.InternalSchema = json.loads(await f.read())  # throws JSONDecodeError
-                if data["expires"] > time.time():
-                    return data["rates"]
+    def get(self, base: str) -> Rates | None:
+        base_rates = self._cache.get(base, {})
+        if base_rates.get("expires", 0) < time.time():
+            return
+        return base_rates["rates"]
 
-    @classmethod
-    async def set(cls, data: Rates, *, base: str):
-        with contextlib.suppress(FileNotFoundError):
-            async with aiofiles.open(cls.base_file(base), "w") as f:
-                data: cls.InternalSchema = {
-                    "rates": data,
-                    "expires": time.time() + cls.config.cache_ttl
-                }
-                await f.write(json.dumps(data))
+    def set(self, data: Rates, *, base: str):
+        self._cache[base] = {
+            "rates": data,
+            "expires": time.time() + self.config.cache_ttl
+        }
 
 
-@lru_cache(maxsize=2)
-def _fetch_currency_online(_: datetime, api_cls: Type[AnyCurrencyApi], base: str) -> Rates:
+_local_storage = _LocalStorage()
+
+
+async def _fetch_currency_online(_: str, api_cls: Type[AnyCurrencyApi], base: str) -> Rates:
     """ Datetime is a caching key.
     :param _:
     :param api_cls:
     :return:
     """
-    # TODO:
-
-    return {
-        "USD": 1.0,
-        "EUR": 0.8,
-        "GBP": 0.7,
-        "JPY": 120.0,
-    }
-    # api: AnyCurrencyApi = api_cls.construct()
-    # return api.get_rates(base=base)
+    api: AnyCurrencyApi = api_cls.construct()
+    return await api.get_rates(base=base)
 
 
 async def _fetch_currency_online_and_store(
         base: str = BASE_CURRENCY,
         api_cls: Type[AnyCurrencyApi] = ExchangeRate
 ) -> Rates:
-    rates: Rates = _fetch_currency_online(
-        datetime.date.today(),
+    rates: Rates = await _fetch_currency_online(
+        datetime.date.today().isoformat(),
         api_cls=api_cls,
         base=base
     )
 
-    await _LocalStorage.set(rates, base=base)
+    _local_storage.set(rates, base=base)
 
     return rates
 
 
 async def fetch_currency(*, base: str = BASE_CURRENCY, api_cls: Type[AnyCurrencyApi] = ExchangeRate) -> Rates:
     return (
-        await _LocalStorage.get(base)
-        or await _fetch_currency_online_and_store(base=base, api_cls=api_cls)
+            _local_storage.get(base)
+            or await _fetch_currency_online_and_store(base=base, api_cls=api_cls)
     )

@@ -12,7 +12,7 @@ from src.currency.apis.base import CurrencyRateProvider, classmethod_interpret_a
 
 
 class ExchangeRate(CurrencyRateProvider):
-    url: ClassVar[str] = "https://api.exchangerate-api.com/v6/latest"
+    url: ClassVar[str] = "https://open.er-api.com/v6/latest"
 
     @classmethod
     @classmethod_interpret_api_error(httpx.HTTPStatusError, JSONDecodeError, KeyError)
