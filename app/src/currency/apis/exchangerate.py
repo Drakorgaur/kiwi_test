@@ -5,6 +5,7 @@ terms_of_use https://www.exchangerate-api.com/
 from json import JSONDecodeError
 from typing import ClassVar
 
+import environ
 import httpx
 
 from src.contracts.currency import Rates
@@ -12,7 +13,11 @@ from src.currency.apis.base import CurrencyRateProvider, classmethod_interpret_a
 
 
 class ExchangeRate(CurrencyRateProvider):
-    url: ClassVar[str] = "https://api.exchangerate-api.com/v6/latest"
+    @environ.config(prefix="EXCHANGE_RATE_API")
+    class Config:
+        url: str = environ.var()
+
+    url: ClassVar[str] = environ.to_config(Config).url
 
     @classmethod
     @classmethod_interpret_api_error(httpx.HTTPStatusError, JSONDecodeError, KeyError)

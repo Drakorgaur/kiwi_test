@@ -1,0 +1,156 @@
+{
+    "input": {
+        "sorting_type": "cheapest",
+        "itineraries": [
+            {
+                "id": "urban_heritage_odyssey",
+                "duration_minutes": 275,
+                "price": {
+                    "amount": "620",
+                    "currency": "USD"
+                }
+            },
+            {
+                "id": "city_night_escape",
+                "duration_minutes": 180,
+                "price": {
+                    "amount": "500",
+                    "currency": "EUR"
+                }
+            },
+            {
+                "id": "sunset_cultural_walk",
+                "duration_minutes": 90,
+                "price": {
+                    "amount": "320",
+                    "currency": "GBP"
+                }
+            },
+            {
+                "id": "historic_architecture_tour",
+                "duration_minutes": 240,
+                "price": {
+                    "amount": "550",
+                    "currency": "JPY"
+                }
+            },
+            {
+                "id": "culinary_journey",
+                "duration_minutes": 200,
+                "price": {
+                    "amount": "580",
+                    "currency": "CAD"
+                }
+            },
+            {
+                "id": "ancient_ruins_adventure",
+                "duration_minutes": 300,
+                "price": {
+                    "amount": "670",
+                    "currency": "AUD"
+                }
+            },
+            {
+                "id": "eco_forest_expedition",
+                "duration_minutes": 150,
+                "price": {
+                    "amount": "400",
+                    "currency": "INR"
+                }
+            },
+            {
+                "id": "island_cultural_experience",
+                "duration_minutes": 210,
+                "price": {
+                    "amount": "600",
+                    "currency": "CHF"
+                }
+            },
+            {
+                "id": "village_artisan_exploration",
+                "duration_minutes": 130,
+                "price": {
+                    "amount": "450",
+                    "currency": "ZAR"
+                }
+            }
+        ]
+    },
+    "expected": {
+        "sorting_type": "cheapest",
+        "sorted_itineraries": [
+            {
+                "id": "historic_architecture_tour",
+                "duration_minutes": 240,
+                "price": {
+                    "amount": "550",
+                    "currency": "JPY"
+                }
+            },
+            {
+                "id": "eco_forest_expedition",
+                "duration_minutes": 150,
+                "price": {
+                    "amount": "400",
+                    "currency": "INR"
+                }
+            },
+            {
+                "id": "village_artisan_exploration",
+                "duration_minutes": 130,
+                "price": {
+                    "amount": "450",
+                    "currency": "ZAR"
+                }
+            },
+            {
+                "id": "sunset_cultural_walk",
+                "duration_minutes": 90,
+                "price": {
+                    "amount": "320",
+                    "currency": "GBP"
+                }
+            },
+            {
+                "id": "culinary_journey",
+                "duration_minutes": 200,
+                "price": {
+                    "amount": "580",
+                    "currency": "CAD"
+                }
+            },
+            {
+                "id": "ancient_ruins_adventure",
+                "duration_minutes": 300,
+                "price": {
+                    "amount": "670",
+                    "currency": "AUD"
+                }
+            },
+            {
+                "id": "city_night_escape",
+                "duration_minutes": 180,
+                "price": {
+                    "amount": "500",
+                    "currency": "EUR"
+                }
+            },
+            {
+                "id": "urban_heritage_odyssey",
+                "duration_minutes": 275,
+                "price": {
+                    "amount": "620",
+                    "currency": "USD"
+                }
+            },
+            {
+                "id": "island_cultural_experience",
+                "duration_minutes": 210,
+                "price": {
+                    "amount": "600",
+                    "currency": "CHF"
+                }
+            }
+        ]
+    }
+}

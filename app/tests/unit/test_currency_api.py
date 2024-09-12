@@ -6,7 +6,9 @@ from httpx import HTTPStatusError
 
 from src.currency.apis.base import classmethod_interpret_api_error
 from src.currency.apis.exceptions import ExternalAPIError
-from src.currency.apis.exchangerate import ExchangeRate
+with mock.patch("environ.to_config") as mock_to_config:
+    from src.currency.apis.exchangerate import ExchangeRate
+    ExchangeRate.url = "https://test.com"
 
 
 class TestCurrencyApi(IsolatedAsyncioTestCase):

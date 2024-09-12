@@ -1,59 +1,35 @@
-import json
 import time
-from unittest import mock, IsolatedAsyncioTestCase
+from typing import ClassVar
+from unittest import TestCase
 
-import aiofiles
 
 from src.currency.fetch import _LocalStorage  # noqa
 
 
-class TestLocalCaching(IsolatedAsyncioTestCase):
-    @staticmethod
-    def make_fs():
-        content = []
-        mock_fs = mock.MagicMock(
-            write=content.append,
-            read=lambda *args, **kwargs: content.pop(0)
-        )
-        return content, mock_fs
+class TestLocalCaching(TestCase):
+    BASE: ClassVar[str] = "USD"
 
-    @classmethod
-    def setUpClass(cls):
-        # https://github.com/Tinche/aiofiles?tab=readme-ov-file#writing-tests-for-aiofiles
-        aiofiles.threadpool.wrap.register(mock.MagicMock)(  # noqa
-            lambda *args, **kwargs: aiofiles.threadpool.AsyncBufferedIOBase(*args, **kwargs)  # noqa
-        )
+    def test_local_set_get(self):
+        storage = _LocalStorage()
+        data = {self.BASE: 1, "EUR": 0.8}
+        storage.set(data, base=self.BASE)
+        a = storage.get(self.BASE)
+        self.assertEqual(a, data)
 
-    async def test_local_set_get(self):
-        content, mock_fs = self.make_fs()
+    def test_no_return_on_expired_cache(self):
+        data = {self.BASE: 1, "EUR": 0.8}
+        storage = _LocalStorage()
+        storage.set(data, base=self.BASE)
+        patched_data: storage.InternalSchema = storage._cache[self.BASE]
+        patched_data["expires"] = 0
 
-        with mock.patch('aiofiles.threadpool.sync_open', return_value=mock_fs):
-            data = {"USD": 1, "EUR": 0.8}
-            await _LocalStorage.set(data, base="USD")
-            a = await _LocalStorage.get("USD")
-            self.assertEqual(a, data)
+        a = storage.get("USD")
+        self.assertIsNone(a)
 
-    async def test_no_return_on_expired_cache(self):
-        content, mock_fs = self.make_fs()
+    def test_cache_time(self):
+        storage = _LocalStorage()
+        storage.config.cache_ttl = 100
+        data = {self.BASE: 1, "EUR": 0.8}
+        storage.set(data, base=self.BASE)
 
-        with mock.patch('aiofiles.threadpool.sync_open', return_value=mock_fs):
-            data = {"USD": 1, "EUR": 0.8}
-            await _LocalStorage.set(data, base="USD")
-            patched_data: _LocalStorage.InternalSchema = json.loads(content[0])
-            patched_data["expires"] = 0
-            content[0] = json.dumps(patched_data)
-
-            a = await _LocalStorage.get("USD")
-            self.assertIsNone(a)
-
-    async def test_cache_time(self):
-        content, mock_fs = self.make_fs()
-
-        with mock.patch('aiofiles.threadpool.sync_open', return_value=mock_fs):
-            _LocalStorage.config.cache_ttl = 100
-            data = {"USD": 1, "EUR": 0.8}
-            await _LocalStorage.set(data, base="USD")
-
-            cache: _LocalStorage.InternalSchema = json.loads(content[0])
-            self.assertAlmostEqual(cache["expires"], time.time() + 100, delta=5)
-
+        self.assertAlmostEqual(storage._cache[self.BASE]["expires"], time.time() + 100, delta=5)
