@@ -65,8 +65,7 @@ class _AbstractSortMeta(ABCMeta):
             return cls
 
         try:
-            # TODO: possible name collision. Should I handle it?
-            _itineraries_sorts[cls.name] = cls  # noqa TODO
+            _itineraries_sorts[cls.name] = cls  # noqa
         except AttributeError:
             logger.warning(
                 f"Sorting algorithm `{name}` inherits from class::AbstractSort "
@@ -118,7 +117,6 @@ class BestSort(AbstractSort):
 
     @staticmethod
     def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
-        # TODO: some more complex logic?
         return sorted(
             itineraries,
             key=lambda itinerary: (
