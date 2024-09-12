@@ -1,9 +1,11 @@
 import contextlib
+import json
 import os
 import time
 import unittest
 from collections.abc import Callable
 from pathlib import Path
+from typing import TypedDict
 
 import environ
 import httpx
@@ -27,6 +29,9 @@ class TestContainers(unittest.TestCase):
 
     api: DockerContainer
     proxy: DockerContainer
+    smoker: DockerContainer
+
+    rates_route = "/v6/latest/USD"
 
     @classmethod
     def setUpClass(cls):
@@ -41,6 +46,8 @@ class TestContainers(unittest.TestCase):
 
         socket_vol = "socket_vol"
         cache_vol = "cache_vol"
+        cache_dir = "/tmp/cache"
+
         client.create_volume(socket_vol)
         client.create_volume(cache_vol)
 
@@ -55,37 +62,59 @@ class TestContainers(unittest.TestCase):
 
         api = DockerContainer(cls.config.api_image, user=0)
         proxy = DockerContainer(cls.config.proxy_image)
+        net_alias = "rate_api"
+        cls.smoker = DockerContainer("ghcr.io/smocker-dev/smocker").with_name(net_alias)
 
         api.with_network(network)
         proxy.with_network(network)
+        cls.smoker.with_network(network)
 
         api.with_volume_mapping(socket_vol, "/www/run/", mode="rw")
-        cache_dir = "/tmp/cache"
         api.with_volume_mapping(cache_vol, cache_dir, mode="rw")
         proxy.with_volume_mapping(socket_vol, "/www/run/", mode="rw")
         proxy.with_volume_mapping(
             f"{cls.config.project_dir / 'proxy' / 'nginx.conf'}",
             "/etc/nginx/nginx.conf"
         )
+        cls.smoker.with_network(network)
 
         proxy.with_bind_ports(80, 8000)
+        cls.smoker.with_bind_ports(8081, 8081)
 
         api.with_env("CURRENCY_LOCAL_DIR", cache_dir)
+        api.with_env("EXCHANGE_RATE_API_URL", f"http://{net_alias}:8080/v6/latest")
 
         cls.api = api.start()
         cls.proxy = proxy.start()
+        cls.smoker.start()
 
+        cls.register_smoker_handler()
         cls.ping_app_until_ready()
 
     @classmethod
     def tearDownClass(cls):
         cls.api.stop()
         cls.proxy.stop()
+        cls.smoker.stop()
         cls.cleanup()
 
     @classmethod
     def base_url(cls):
         return f"http://{cls.proxy.get_container_host_ip()}:{list(cls.proxy.ports.values())[0]}"
+
+    @classmethod
+    def register_smoker_handler(cls):
+        for _ in range(3):
+            with httpx.Client() as client, contextlib.suppress(httpx.ConnectError, httpx.RemoteProtocolError):
+                url = f"http://{cls.smoker.get_container_host_ip()}:{list(cls.smoker.ports.values())[0]}"
+
+                with open(Path(__file__).parent / "rates.json", "r") as f:
+                    response = client.post(f"{url}/mocks", json=json.load(f))
+
+                if response.status_code == 200:
+                    break
+
+            time.sleep(2)
 
     @classmethod
     def ping_app_until_ready(cls):
@@ -150,3 +179,22 @@ class TestContainers(unittest.TestCase):
             data2 = response.json()
 
             self.assertEqual(data1, data2)
+
+    def test_cases(self):
+        class TestSchema(TypedDict):
+            input: object
+            expected: object
+
+        cases: Path = Path(__file__).parent / "cases"
+        for test_case in cases.iterdir():
+            algorithm, no = test_case.stem.split("_", 1)
+            with self.subTest(f"{algorithm} #{no}"):
+                with httpx.Client() as client, test_case.open("r") as f:
+                    test: TestSchema = json.loads(f.read())
+                    response = client.post(
+                        f"{self.base_url()}/sort_itineraries",
+                        json=test["input"]
+                    )
+                    self.assertEqual(response.status_code, 200, response.content)
+                    data = response.json()
+                    self.assertEqual(data, test["expected"], data)

@@ -19,6 +19,8 @@ services:
     volumes:
       - cache:/tmp/cache:rw
       - socket:/www/run:rw
+    env_file:
+      - app/conf/.env
   proxy:
     image: nginx:alpine
     volumes:
