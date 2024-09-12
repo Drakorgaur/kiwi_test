@@ -12,8 +12,6 @@ services:
       dockerfile: Dockerfile
       args:
         - SOCKET_DIR=/www/run
-    ports:
-      - "8000:8000"  # for local development purposes
     environment:
       - CURRENCY_LOCAL_DIR=/tmp/cache
     volumes:

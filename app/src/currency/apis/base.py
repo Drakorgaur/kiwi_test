@@ -40,14 +40,5 @@ class CurrencyRateProvider(Abstract):
     @abstractmethod
     async def get_rates(self, base) -> Rates: ...
 
-    @classmethod
-    def construct(cls) -> "CurrencyRateProvider":
-        """
-        Use this to construct from a config / env.
-        If other api requires keys, etc.
-        :return:
-        """
-        return cls()
-
 
 AnyCurrencyApi = TypeVar("AnyCurrencyApi", bound=CurrencyRateProvider)
