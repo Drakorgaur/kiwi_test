@@ -33,6 +33,7 @@ class Price(BaseModel):
 
     @field_serializer('amount', when_used='json')
     def amount_to_string(self, v):
+        """Converts amount to string when serializing to json"""
         return str(v)
 
 
@@ -43,10 +44,17 @@ class Itinerary(BaseModel):
 
 
 class SchemaRequest(BaseModel):
+    """Request schema for sorting itineraries"""
     sorting_type: SortingAlgorithmName
     itineraries: list[Itinerary]
 
 
 class SchemaResponse(BaseModel):
+    """Response schema for sorted itineraries"""
     sorting_type: SortingAlgorithmName
     sorted_itineraries: list[Itinerary]
+
+
+class GetSortsSchema(BaseModel):
+    """Response schema for available sorting algorithms"""
+    algorithms: list[SortingAlgorithmName]

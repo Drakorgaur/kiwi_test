@@ -5,25 +5,25 @@ from typing import ClassVar, List
 from src.contracts.sort_itineraries import Itinerary
 from src.sorts import SortAlgorithmIsUnknown
 from src.sorts.base import (
-    BestSort, AbstractSort, get_sort_algorithms, sort_itineraries, _currency_ratio, CheapestSort, FastestSort
+    BestItinerariesSort, AbstractItinerariesSort, get_sort_algorithms, sort_itineraries, _currency_ratio, CheapestItinerariesSort, FastestItinerariesSort
 )
 
 
 class TestSortRegistration(unittest.IsolatedAsyncioTestCase):
     def test_new_class_will_be_registered_as_sort_algorithm(self):
-        type("NewSort", (AbstractSort,), {"name": "new_sort"})
+        type("NewSort", (AbstractItinerariesSort,), {"name": "new_sort"})
 
         self.assertIn("new_sort", get_sort_algorithms())
 
     async def test_new_class_is_accessible_by_application(self):
         name = "new_sort"
-        type("NewSort", (AbstractSort,), {"name": name})
+        type("NewSort", (AbstractItinerariesSort,), {"name": name})
 
         with self.assertRaises(TypeError):  # no sort method
             await sort_itineraries(name, [])
 
         # recreate class with sort method
-        type("NewSort", (AbstractSort,), {"name": name, "sort": staticmethod(lambda x: x)})
+        type("NewSort", (AbstractItinerariesSort,), {"name": name, "sort": staticmethod(lambda x: x)})
 
         data = await sort_itineraries(name, [])
         self.assertEqual(data, [])
@@ -40,7 +40,7 @@ class TestSortRegistration(unittest.IsolatedAsyncioTestCase):
 
 class AbstractTestSort(unittest.TestCase):
     # is not run as is deleted at the end of the file
-    cls: ClassVar[AbstractSort]
+    cls: ClassVar[AbstractItinerariesSort]
 
     def permutate_testing(self, order, itineraries):
         """ Test all possible combinations of itineraries
@@ -205,7 +205,7 @@ class AbstractTestSort(unittest.TestCase):
 
 
 class TestBestSort(AbstractTestSort):
-    cls: ClassVar[AbstractSort] = BestSort
+    cls: ClassVar[AbstractItinerariesSort] = BestItinerariesSort
     
     def test_sort_amount_diff(self):
         self.sort_amount_diff(0, 1, 2)
@@ -230,7 +230,7 @@ class TestBestSort(AbstractTestSort):
 
 
 class TestCheapestSort(AbstractTestSort):
-    cls: ClassVar[AbstractSort] = CheapestSort
+    cls: ClassVar[AbstractItinerariesSort] = CheapestItinerariesSort
 
     def test_sort_amount_diff(self):
         self.sort_amount_diff(0, 1, 2)
@@ -252,7 +252,7 @@ class TestCheapestSort(AbstractTestSort):
 
 
 class TestFastestSort(AbstractTestSort):
-    cls: ClassVar[AbstractSort] = FastestSort
+    cls: ClassVar[AbstractItinerariesSort] = FastestItinerariesSort
 
     def test_sort_duration_diff(self):
         self.sort_duration_diff(0, 1)
