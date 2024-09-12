@@ -12,7 +12,7 @@ class ExchangeRate(CurrencyRateProvider):
     """ExchangeRate API provider.
 
     documentation https://www.exchangerate-api.com/docs/free
-    terms_of_use https://www.exchangerate-api.com/
+    terms of use https://www.exchangerate-api.com/terms
 
     Attributes:
         url: str: url for the API.
