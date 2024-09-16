@@ -161,10 +161,10 @@ class AbstractItinerariesSort~abstract~ {
 class FastestItinerariesSort
 class CheapestItinerariesSort
 class BestItinerariesSort
-class _AbstractSortMeta
+class ABC
 
 object  -->  AbstractItinerariesSort 
-_AbstractSortMeta "isinstanceof" ..>  AbstractItinerariesSort 
+ABC ..>  AbstractItinerariesSort 
 AbstractItinerariesSort  -->  FastestItinerariesSort 
 AbstractItinerariesSort  -->  CheapestItinerariesSort 
 AbstractItinerariesSort  -->  BestItinerariesSort 
