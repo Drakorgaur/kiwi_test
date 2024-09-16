@@ -6,8 +6,8 @@ it uses metaclass to register inherited classes of `AbstractSort`. This makes fi
 the source of truth.
 """
 import contextvars
-from abc import ABCMeta, abstractmethod
-from typing import ClassVar, Iterable, Callable, Protocol, TypeVar, Type
+from abc import abstractmethod, ABC as Abstract
+from typing import ClassVar, Iterable, Protocol, TypeVar, Type, TypeAlias
 from structlog import get_logger
 
 from src.contracts.currency import Rates
@@ -37,9 +37,9 @@ class SupportsSort(Protocol[T]):
 #   this dict should not be accessed directly, use `get_sort_algorithms` instead.
 #   also it should be read-only.
 #   TODO: frozen dict
-#   _itineraries_sorts is updated by meta-class `_AbstractSortMeta` when a new class is created.
-#   more info about meta-classes: https://docs.python.org/3/reference/datamodel.html#metaclasses
-_itineraries_sorts: dict[str, Type["AbstractItinerariesSort"]] = {}
+#   _itineraries_sorts is updated by class `AbstractItinerariesSort` when a new class is created.
+#   more info about PEP-0487: https://peps.python.org/pep-0487/
+_itineraries_sorts: dict[str, Type["AnySort"]] = {}
 # Important info 2
 # _currency_ratio is a context variable that stores currency rates.
 #   this variable should not be accessed directly, use `get_currency_ratio` instead.
@@ -109,37 +109,12 @@ async def sort_itineraries(sort_name: str, data: Iterable[Itinerary]) -> Iterabl
     return sort_cls().sort(data)
 
 
-class _AbstractSortMeta(ABCMeta):
-    name: ClassVar[str]
-    sort: Callable[[Iterable[Itinerary]], Iterable[Itinerary]]
-
-    def __new__(mcs, name, bases, namespace, **kwargs):
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-
-        if object in cls.__bases__:
-            # skip all abstract classes
-            return cls
-
-        try:
-            _itineraries_sorts[cls.name] = cls  # noqa
-        except AttributeError:
-            logger.warning(
-                f"Sorting algorithm `{name}` inherits from class::AbstractSort "
-                f"but does not have a `name` attribute set. This class is not registered as a sorting algorithm.",
-                on="startup",
-            )
-
-        return cls
-
-
-class AbstractItinerariesSort(metaclass=_AbstractSortMeta):
+class AbstractItinerariesSort(Abstract):
     """Abstract class for sorting algorithms.
 
     All sorting algorithms should inherit from this class.
 
-    Important: this is a abstract class that has a meta class `_AbstractSortMeta`
-        that registers all inherited classes except abstract ones.
-        Abstract classes are the classes that bases *directly* from meta-class (via __bases__ attribute).
+    Important: this class registers all inherited classes in `_itineraries_sorts` dict.
 
     Attributes:
         name: name of the sorting algorithm.
@@ -160,9 +135,29 @@ class AbstractItinerariesSort(metaclass=_AbstractSortMeta):
     name: ClassVar[str]
     needs_currency_rate: ClassVar[bool] = False
 
+    def __init_subclass__(cls: Type["AnySort"], **kwargs):
+        """Register inherited classes in `_itineraries_sorts` dict.
+
+        This method is called when a new class is created.
+        It registers the class in `_itiner
+        aries_sorts` dict.
+        """
+        super().__init_subclass__(**kwargs)
+        try:
+            _itineraries_sorts[cls.name] = cls
+        except AttributeError:
+            logger.warning(
+                f"Sorting algorithm `{cls.__name__}` inherits from class::{AbstractItinerariesSort.__name__} "
+                f"but does not have a `name` attribute set. This class is not registered as a sorting algorithm.",
+                on="startup",
+            )
+
     @staticmethod
     @abstractmethod
     def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]: ...
+
+
+AnySort: TypeAlias = TypeVar("AnySort", bound=AbstractItinerariesSort)
 
 
 # sorted is a powerful built-in function uses `PowerSort` (since 3.11, below 3.11 is used TimSort)

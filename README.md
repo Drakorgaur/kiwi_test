@@ -154,17 +154,15 @@ Sort algorithms are registered in the runtime via metaclass to singleton.
 ```mermaid
 classDiagram
 direction TB
-class object
 class AbstractItinerariesSort~abstract~ {
     +sort(itineraries: List[Itinerary]) -> List[Itinerary]
 }
 class FastestItinerariesSort
 class CheapestItinerariesSort
 class BestItinerariesSort
-class _AbstractSortMeta
+class ABC
 
-object  -->  AbstractItinerariesSort 
-_AbstractSortMeta "isinstanceof" ..>  AbstractItinerariesSort 
+ABC ..>  AbstractItinerariesSort 
 AbstractItinerariesSort  -->  FastestItinerariesSort 
 AbstractItinerariesSort  -->  CheapestItinerariesSort 
 AbstractItinerariesSort  -->  BestItinerariesSort 
