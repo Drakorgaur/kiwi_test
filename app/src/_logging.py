@@ -1,6 +1,13 @@
+import os
 import logging
 
 import structlog
+
+
+def set_process_id(_, __, event_dict) -> dict:
+    event_dict["process_id"] = os.getpid()
+
+    return event_dict
 
 
 def get_shared_processors() -> list:
@@ -11,6 +18,7 @@ def get_shared_processors() -> list:
     """
     return [
         structlog.processors.format_exc_info,
+        set_process_id,
         structlog.processors.EventRenamer("message"),
     ]
 
