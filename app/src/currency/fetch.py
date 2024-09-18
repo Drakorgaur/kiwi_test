@@ -1,28 +1,22 @@
-import time
+import contextlib
 
-from typing import Type, ClassVar, TypedDict, Final
+from typing import Type, ClassVar, Final
 
 import environ
+
+from diskcache import Cache, Timeout as CacheTimeout
 
 from src.contracts.currency import Rates
 from src.currency.apis.base import AnyCurrencyApi, BASE_CURRENCY
 from src.currency.apis.exchangerate import ExchangeRate
+from src.currency.config import CurrencyCacheConfig
 
 __all__ = ["fetch_currency"]
-
-from src.currency.config import CurrencyConfig
 
 
 class _LocalStorage:
     """Local storage for currency rates.
     Uses getter-setter interface.
-
-    This class is used to store currency rates in RAM.
-
-    Danger: this class is not thread-safe.
-    TODO: make it thread-safe.
-
-    Important: for this class to work correctly, it should be used as a singleton.
 
     Attributes:
         _cache: dict[str, dict[str, Any]]:
@@ -30,21 +24,13 @@ class _LocalStorage:
             value: dict with keys:
                 - rates: currency rates relative to the base currency.
                 - expires: timestamp when rates expire.
-        config: CurrencyConfig: configuration for currency rates.
-            see config class for more info.
-
-    Classes:
-        InternalSchema: TypedDict - is used for typing purposes.
-            Shows how data is stored in the cache.
+        config: CurrencyCacheConfig: configuration for currency rates.
+            See config class for more info.
     """
-    config: ClassVar[CurrencyConfig] = environ.to_config(CurrencyConfig)
-
-    class InternalSchema(TypedDict):
-        rates: Rates
-        expires: float
+    config: ClassVar[CurrencyCacheConfig] = environ.to_config(CurrencyCacheConfig)
 
     def __init__(self):
-        self._cache: dict[str, _LocalStorage.InternalSchema] = {}
+        self._cache: Final[Cache] = Cache(self.config.cache_path.as_posix())
 
     def get(self, base: str) -> Rates | None:
         """Get currency rates from the cache.
@@ -56,10 +42,8 @@ class _LocalStorage:
             Rates | None: currency rates relative to the base currency.
                 None if rates are not available or expired.
         """
-        base_rates: _LocalStorage.InternalSchema = self._cache.get(base, {})
-        if base_rates.get("expires", 0) < time.time():
-            return
-        return base_rates["rates"]
+        with contextlib.suppress(CacheTimeout):
+            return self._cache.get(base, retry=True)
 
     def set(self, data: Rates, *, base: str):
         """Set currency rates to the cache.
@@ -68,10 +52,7 @@ class _LocalStorage:
             data: currency rates relative to the base currency.
             base: currency code in ISO 4217 standard.
         """
-        self._cache[base] = {
-            "rates": data,
-            "expires": time.time() + self.config.cache_ttl
-        }
+        self._cache.set(key=base, value=data, expire=self.config.cache_ttl)
 
 
 # (private for this module) Singleton instance of the local storage.
