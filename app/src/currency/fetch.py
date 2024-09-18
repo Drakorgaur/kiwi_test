@@ -1,10 +1,11 @@
 import contextlib
+import datetime
 
 from typing import Type, ClassVar, Final
 
 import environ
 
-from diskcache import Cache, Timeout as CacheTimeout
+from diskcache import Cache, Timeout as CacheTimeout, Lock
 
 from src.contracts.currency import Rates
 from src.currency.apis.base import AnyCurrencyApi, BASE_CURRENCY
@@ -48,12 +49,26 @@ class _LocalStorage:
     def set(self, data: Rates, *, base: str):
         """Set currency rates to the cache.
 
+        Cache ttl is set to the end of the day.
+
         Args:
             data: currency rates relative to the base currency.
             base: currency code in ISO 4217 standard.
         """
-        self._cache.set(key=base, value=data, expire=self.config.cache_ttl)
+        expiration_date: Final[datetime.date] = datetime.datetime.now().date() + datetime.timedelta(days=1)
 
+        self._cache.set(key=base, value=data, expire=int(expiration_date.strftime("%s")))
+
+    def lock(self, base: str) -> Lock:
+        """Get lock for the given base currency.
+
+        Args:
+            base: currency code in ISO 4217 standard.
+
+        Returns:
+            Lock: lock for the given base currency.
+        """
+        return Lock(self._cache, base)
 
 # (private for this module) Singleton instance of the local storage.
 # Holds currency rates in RAM in runtime.
@@ -125,7 +140,9 @@ async def fetch_currency(*, base: str = BASE_CURRENCY, api_cls: Type[AnyCurrency
     Raises:
         ExternalAPIError: if currency rate fetch failed.
     """
-    return (
-            _local_storage.get(base)  # returns None on cache miss
-            or await _fetch_currency_online_and_store(base=base, api_cls=api_cls)  # raises ExternalAPIError
-    )
+
+    with _local_storage.lock(base):
+        return (
+                _local_storage.get(base)  # returns None on cache miss
+                or await _fetch_currency_online_and_store(base=base, api_cls=api_cls)  # raises ExternalAPIError
+        )
