@@ -3,7 +3,7 @@ from typing import TypeAlias, Annotated
 from pydantic import BaseModel, field_serializer, Field
 from pydantic.functional_validators import AfterValidator
 
-__all__ = ["SchemaRequest", "SortingAlgorithmName", "Price", "Itinerary", "SchemaResponse"]
+__all__ = ["SchemaRequest", "SortingAlgorithmName", "Price", "Itinerary", "SchemaResponse", "GetSortsSchema"]
 
 
 SortingAlgorithmName: TypeAlias = str
