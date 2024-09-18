@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import TypeAlias, Annotated
 
 from pydantic import BaseModel, field_serializer, Field
@@ -20,13 +21,13 @@ class Price(BaseModel):
     """Price of an itinerary
 
     Attributes:
-      amount: int -
+      amount: Decimal -
         API definition stands that `amount` in json schema as type string,
         but we want to work with it as int;
         however, on response it should be converted back to string, see `field_serializer('amount', ...)`
       currency: int - uppercase currency code.
     """
-    amount: int
+    amount: Decimal
     currency: Annotated[str, AfterValidator(validate_iso_4217_currency_code)] = Field(
         description="currency in ISO 4217 standard",
     )

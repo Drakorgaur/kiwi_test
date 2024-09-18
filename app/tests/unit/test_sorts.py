@@ -5,7 +5,7 @@ from typing import ClassVar, List
 from src.contracts.sort_itineraries import Itinerary
 from src.sorts import SortAlgorithmIsUnknown
 from src.sorts.base import (
-    BestItinerariesSort, AbstractItinerariesSort, get_sort_algorithms, sort_itineraries, _currency_ratio, CheapestItinerariesSort, FastestItinerariesSort
+    BestItinerariesSort, AbstractItinerariesSort, get_sort_algorithms, sort_itineraries, CheapestItinerariesSort, FastestItinerariesSort
 )
 
 
@@ -40,7 +40,7 @@ class TestSortRegistration(unittest.IsolatedAsyncioTestCase):
 
 class AbstractTestSort(unittest.TestCase):
     # is not run as is deleted at the end of the file
-    cls: ClassVar[AbstractItinerariesSort]
+    sorter: ClassVar[AbstractItinerariesSort]
 
     def permutate_testing(self, order, itineraries):
         """ Test all possible combinations of itineraries
@@ -56,19 +56,15 @@ class AbstractTestSort(unittest.TestCase):
         for case in permutations(itineraries):
             with self.subTest(case=case):
                 self.assertEqual(
-                    self.cls.sort(
+                    self.sorter.sort(
                         case
                     ),
                     expected_result
                 )
 
-    def setUp(self):
-        # assume USD-based currency
-        _currency_ratio.set({"USD": 1, "EUR": 0.8})
-
     def test_sort_is_accessible(self):
         with self.subTest():
-            self.assertEqual(self.cls.sort([]), [])
+            self.assertEqual(self.sorter.sort([]), [])
 
         with self.subTest():
             itinerary: Itinerary = Itinerary(
@@ -76,14 +72,14 @@ class AbstractTestSort(unittest.TestCase):
                 duration_minutes=1,
                 price={"amount": 1, "currency": "USD"},
             )
-            self.assertEqual(self.cls.sort([itinerary]), [itinerary])
+            self.assertEqual(self.sorter.sort([itinerary]), [itinerary])
 
     def test_incorrect_data_on_input(self):
         # we can also test bad 'Price' or 'Duration' values (bad `Itinerary`)
         # but it is not responsibility of the sort algorithm, it's responsibility of the data provider - pydantic
         with self.subTest():
             with self.assertRaises(TypeError):
-                self.cls.sort(None)  # noqa
+                self.sorter.sort(None)  # noqa
 
     def sort_amount_diff(self, *order):
         self.permutate_testing(order, [
@@ -205,7 +201,7 @@ class AbstractTestSort(unittest.TestCase):
 
 
 class TestBestSort(AbstractTestSort):
-    cls: ClassVar[AbstractItinerariesSort] = BestItinerariesSort
+    sorter: ClassVar[AbstractItinerariesSort] = BestItinerariesSort({"USD": 1, "EUR": 0.8})
     
     def test_sort_amount_diff(self):
         self.sort_amount_diff(0, 1, 2)
@@ -230,7 +226,7 @@ class TestBestSort(AbstractTestSort):
 
 
 class TestCheapestSort(AbstractTestSort):
-    cls: ClassVar[AbstractItinerariesSort] = CheapestItinerariesSort
+    sorter: ClassVar[AbstractItinerariesSort] = CheapestItinerariesSort({"USD": 1, "EUR": 0.8})
 
     def test_sort_amount_diff(self):
         self.sort_amount_diff(0, 1, 2)
@@ -252,7 +248,7 @@ class TestCheapestSort(AbstractTestSort):
 
 
 class TestFastestSort(AbstractTestSort):
-    cls: ClassVar[AbstractItinerariesSort] = FastestItinerariesSort
+    sorter: ClassVar[AbstractItinerariesSort] = FastestItinerariesSort({"USD": 1, "EUR": 0.8})
 
     def test_sort_duration_diff(self):
         self.sort_duration_diff(0, 1)

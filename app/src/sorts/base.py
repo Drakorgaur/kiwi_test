@@ -7,7 +7,8 @@ the source of truth.
 """
 import contextvars
 from abc import abstractmethod, ABC as Abstract
-from typing import ClassVar, Iterable, Protocol, TypeVar, Type, TypeAlias
+from decimal import Decimal
+from typing import ClassVar, Iterable, Protocol, TypeVar, Type, TypeAlias, Final
 from structlog import get_logger
 
 from src.contracts.currency import Rates
@@ -40,35 +41,6 @@ class SupportsSort(Protocol[T]):
 #   _itineraries_sorts is updated by class `AbstractItinerariesSort` when a new class is created.
 #   more info about PEP-0487: https://peps.python.org/pep-0487/
 _itineraries_sorts: dict[str, Type["AnySort"]] = {}
-# Important info 2
-# _currency_ratio is a context variable that stores currency rates.
-#   this variable should not be accessed directly, use `get_currency_ratio` instead.
-#   ContextVar is used to separate currency rates for different OLTPs.
-#   Also this is key-error handler and async-to-sync buffer.
-#       As sorting algorithms are sync, but currency rate fetch is async.
-#   More info about contextvars: https://docs.python.org/3/library/contextvars.html
-_currency_ratio: contextvars.ContextVar[Rates] = contextvars.ContextVar("currency_ratio")
-
-
-def get_currency_ratio(currency: str) -> float:
-    """Get currency rate for given currency.
-
-    Note: this uses `get` method of context variable, where is stored currency rates to base currency.
-        For v1 sorting algorithm the base is USD.
-
-    Args:
-        currency: currency code in ISO 4217 standard.
-
-    Returns:
-        float: currency rate.
-
-    Raises:
-        CurrencyUnavailableException: if currency rate is not available.
-    """
-    try:
-        return _currency_ratio.get()[currency]
-    except LookupError as exc:
-        raise CurrencyUnavailableException(f"Currency rate for {currency} is not available") from exc
 
 
 def get_sort_algorithms() -> Iterable[str]:
@@ -103,10 +75,7 @@ async def sort_itineraries(sort_name: str, data: Iterable[Itinerary]) -> Iterabl
     except KeyError as exc:
         raise SortAlgorithmIsUnknown(sort_name) from exc
 
-    if sort_cls.needs_currency_rate:
-        _currency_ratio.set(await fetch_currency())  # raises ExternalAPIError
-
-    return sort_cls().sort(data)
+    return sort_cls(await fetch_currency()).sort(data)
 
 
 class AbstractItinerariesSort(Abstract):
@@ -120,9 +89,6 @@ class AbstractItinerariesSort(Abstract):
         name: name of the sorting algorithm.
             Important: this name is used to register the sorting algorithm.
             And bound string literal to the class.
-        needs_currency_rate: flag to indicate if the sorting algorithm needs currency rate.
-            If True, the currency rate is fetched before sorting itineraries.
-            (fetch may also be cached, see module `currency.fetch`)
 
     Protocols Implemented:
         SupportsSort: protocol to support sorting of any iterable data.
@@ -133,7 +99,9 @@ class AbstractItinerariesSort(Abstract):
             It should return an iterable of sorted itineraries.
     """
     name: ClassVar[str]
-    needs_currency_rate: ClassVar[bool] = False
+
+    def __init__(self, currency_rates: Rates):
+        self.currency_rates: Final[Rates] = currency_rates
 
     def __init_subclass__(cls: Type["AnySort"], **kwargs):
         """Register inherited classes in `_itineraries_sorts` dict.
@@ -152,9 +120,8 @@ class AbstractItinerariesSort(Abstract):
                 on="startup",
             )
 
-    @staticmethod
     @abstractmethod
-    def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]: ...
+    def sort(self, itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]: ...
 
 
 AnySort: TypeAlias = TypeVar("AnySort", bound=AbstractItinerariesSort)
@@ -173,8 +140,7 @@ class FastestItinerariesSort(AbstractItinerariesSort):
     """
     name: ClassVar[str] = "fastest"
 
-    @staticmethod
-    def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
+    def sort(self, itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
         return sorted(itineraries, key=lambda itinerary: itinerary.duration_minutes)
 
 
@@ -186,14 +152,15 @@ class CheapestItinerariesSort(AbstractItinerariesSort):
     See parent classes for more info.
     """
     name: ClassVar[str] = "cheapest"
-    needs_currency_rate: ClassVar[bool] = True
 
-    @staticmethod
-    def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
-        return sorted(
-            itineraries,
-            key=lambda itinerary: itinerary.price.amount / get_currency_ratio(itinerary.price.currency)
-        )
+    def sort(self, itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
+        try:
+            return sorted(
+                itineraries,
+                key=lambda itinerary: itinerary.price.amount / Decimal(self.currency_rates[itinerary.price.currency])
+            )
+        except KeyError as exc:
+            raise CurrencyUnavailableException(f"Currency rate for {exc.args[0]} is not available") from exc
 
 
 class BestItinerariesSort(AbstractItinerariesSort):
@@ -204,17 +171,18 @@ class BestItinerariesSort(AbstractItinerariesSort):
     See parent classes for more info.
     """
     name: ClassVar[str] = "best"
-    needs_currency_rate: ClassVar[bool] = True
 
-    @staticmethod
-    def sort(itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
-        return sorted(
-            itineraries,
-            key=lambda itinerary: (
-                    (
-                            itinerary.price.amount
-                            / get_currency_ratio(itinerary.price.currency)
-                    )
-                    * itinerary.duration_minutes
+    def sort(self, itineraries: Iterable[Itinerary]) -> Iterable[Itinerary]:
+        try:
+            return sorted(
+                itineraries,
+                key=lambda itinerary: (
+                        (
+                                itinerary.price.amount
+                                / Decimal(self.currency_rates[itinerary.price.currency])
+                        )
+                        * itinerary.duration_minutes
+                )
             )
-        )
+        except KeyError as exc:
+            raise CurrencyUnavailableException(f"Currency rate for {exc.args[0]} is not available") from exc
