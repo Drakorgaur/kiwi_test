@@ -216,6 +216,7 @@ Requests that are cached could be recognized by the `X-Cache` header.
 
 Proxy passes only POST and GET requests.
 
+
 ## Continuous Integration
 
 CI is primarily a testing application build and running tests only on pull requests.
